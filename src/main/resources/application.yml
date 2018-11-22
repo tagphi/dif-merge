@@ -1,0 +1,28 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    ipfs:
+      local:
+        host: 127.0.0.1
+        port: 5001
+        check-exists-timeout-secs: 3
+        download-timeout-secs: 600
+      remote:
+        #host: 175.6.228.227
+        host: 127.0.0.1
+        port: 5001
+        check-exists-timeout-secs: 3
+        download-timeout-secs: 600
+    tempFileDir: ./temp/
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+
+  datasource:
+    driverClassName: org.h2.Driver
+    url: jdbc:h2:mem:db_jobs;MODE=MYSQL;INIT=RUNSCRIPT FROM 'classpath:scripts/init_table.sql'
+    username:
+    password:
