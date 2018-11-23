@@ -8,5 +8,7 @@ callbackUrl VARCHAR(200),
 callbackArgs VARCHAR(200),
 step VARCHAR(50),
 status VARCHAR(10),
-message Text
+message Text,
+createTime datetime NOT NULL DEFAULT NOW(),
+modifiedTime datetime NOT NULL DEFAULT NOW()
 );

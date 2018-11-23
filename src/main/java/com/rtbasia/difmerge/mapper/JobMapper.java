@@ -10,7 +10,7 @@ public interface JobMapper {
             "values(#{tempFilePath},#{action},#{extraArgs},#{callbackUrl},#{callbackArgs})")
     public Integer addJob(Job job);
 
-    @Insert("update jobs set step=#{action}, status=#{status}, message=#{message} " +
+    @Insert("update jobs set step=#{action}, status=#{status}, message=#{message}, modifiedTime=NOW()" +
             "where id=#{id}")
     public Integer updateJob(Job job);
 }

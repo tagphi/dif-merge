@@ -1,6 +1,7 @@
 package com.rtbasia.difmerge.controller;
 
 import com.rtbasia.difmerge.entity.Job;
+import com.rtbasia.difmerge.http.SubmitResponse;
 import com.rtbasia.difmerge.mapper.JobMapper;
 import com.rtbasia.difmerge.schedule.Scheduler;
 import com.rtbasia.difmerge.validator.AppealValidator;
@@ -53,11 +54,11 @@ public class MergeController {
     }
 
     @PostMapping("/deltaUpload")
-    public void deltaUpload(@RequestParam("file") MultipartFile file,
-                            @RequestParam("type") String type,
-                            @RequestParam("extraArgs") String extraArgs,
-                            @RequestParam("callbackUrl") String callbackUrl,
-                            @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
+    public SubmitResponse deltaUpload(@RequestParam("file") MultipartFile file,
+                                      @RequestParam("type") String type,
+                                      @RequestParam("extraArgs") String extraArgs,
+                                      @RequestParam("callbackUrl") String callbackUrl,
+                                      @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
         String tempFilePath = backupFile(file.getInputStream());
 
         // 校验文件格式
@@ -70,10 +71,12 @@ public class MergeController {
 
         // 提交job到任务队列
         scheduler.addTask(job);
+
+        return SubmitResponse.ok();
     }
 
     @PostMapping("/merge")
-    public void merge(@RequestParam("type") String type,
+    public SubmitResponse merge(@RequestParam("type") String type,
                       @RequestParam("extraArgs") String extraArgs,
                       @RequestParam("callbackUrl") String callbackUrl,
                       @RequestParam("callbackArgs") String callbackArgs) {
@@ -84,10 +87,12 @@ public class MergeController {
 
         // 提交job到任务队列
         scheduler.addTask(job);
+
+        return SubmitResponse.ok();
     }
 
     @PostMapping("/appeal")
-    public void appeal(@RequestParam("file") MultipartFile file,
+    public SubmitResponse appeal(@RequestParam("file") MultipartFile file,
                        @RequestParam("type") String type,
                        @RequestParam("callbackUrl") String callbackUrl,
                        @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
@@ -103,5 +108,7 @@ public class MergeController {
 
         // 提交job到任务队列
         scheduler.addTask(job);
+
+        return SubmitResponse.ok();
     }
 }

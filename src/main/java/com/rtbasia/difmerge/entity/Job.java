@@ -5,6 +5,7 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 
 public class Job {
     private int id;
@@ -16,6 +17,8 @@ public class Job {
     private String step;
     private String message;
     private String status;
+    private Timestamp createTime;
+    private Timestamp modifiedTime;
 
     public Job(String tempFilePath,
                String action,
@@ -99,6 +102,22 @@ public class Job {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Timestamp getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Timestamp createTime) {
+        this.createTime = createTime;
+    }
+
+    public Timestamp getModifiedTime() {
+        return modifiedTime;
+    }
+
+    public void setModifiedTime(Timestamp modifiedTime) {
+        this.modifiedTime = modifiedTime;
     }
 
     public void cleanTempFile() throws IOException {
