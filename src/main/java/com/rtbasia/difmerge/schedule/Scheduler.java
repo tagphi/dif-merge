@@ -26,17 +26,23 @@ public class Scheduler implements ApplicationContextAware {
     private AbstractTask buildTask(Job job) {
         String action = job.getAction();
 
-        if ("deltaupload".equals(job.getAction())) {
+        if (action.startsWith("deltaUpload")) {
             return ctx.getBean(DeltaUploadTask.class, job);
-        } else if ("mergeDevice".equals(job.getAction())) {
+        } else if ("mergeDevice".equals(action)) {
             return ctx.getBean(DeviceMergeTask.class, job);
+        } else if ("mergeIP".equals(action)) {
+            return ctx.getBean(IPMergeTask.class, job);
+        } else if ("mergeDefaultDevice".equals(action)) {
+            return ctx.getBean(DefaultDeviceMergeTask.class, job);
+        } else if (action.startsWith("appeal")) {
+            return ctx.getBean(AppealTask.class, job);
         } else {
             throw new IllegalArgumentException("unkown action " + action);
         }
     }
 
     public void addTask(Job job) {
-        AbstractTask task = buildTask(job); // TODO: 根据任务不同分配不同的task
+        AbstractTask task = buildTask(job);
 
         task.addProgressLisener(new ProgressLisener() {
             @Override

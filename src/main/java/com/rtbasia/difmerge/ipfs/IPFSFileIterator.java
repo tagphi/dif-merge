@@ -12,18 +12,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
-public class IPFSFileMerger {
+public class IPFSFileIterator {
     final static Logger logger = LoggerFactory.getLogger(MergeTask.class);
 
     public List<String> someHash;
     public IPFSClient ipfs;
 
-    public IPFSFileMerger(List<String> someHash, IPFSClient ipfsClient) {
+    public IPFSFileIterator(List<String> someHash, IPFSClient ipfsClient) {
         this.someHash = someHash;
         this.ipfs = ipfsClient;
     }
 
-    public void merge(MergeHandler mergeHandler, ProgressHandler progressHandler) throws TimeoutException, IOException {
+    public void forEachLine(LineProcessor lineProcessor, ProgressHandler progressHandler) throws TimeoutException, IOException {
         int i = 0;
 
         for (String hashBase58 : someHash) {
@@ -49,7 +49,7 @@ public class IPFSFileMerger {
             blackListData = new HashSet(Arrays.asList(new String(ipfs.cat(hashBase58)).split("\n")));
 
             for (String blackListDatum : blackListData) {
-                mergeHandler.merge(blackListDatum, hashBase58);
+                lineProcessor.process(blackListDatum, hashBase58);
             }
         }
     }

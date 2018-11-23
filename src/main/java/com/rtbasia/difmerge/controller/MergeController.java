@@ -3,6 +3,7 @@ package com.rtbasia.difmerge.controller;
 import com.rtbasia.difmerge.entity.Job;
 import com.rtbasia.difmerge.mapper.JobMapper;
 import com.rtbasia.difmerge.schedule.Scheduler;
+import com.rtbasia.difmerge.validator.AppealValidator;
 import com.rtbasia.difmerge.validator.FileFormatException;
 import com.rtbasia.difmerge.validator.DeltaFileValidator;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
@@ -51,18 +52,18 @@ public class MergeController {
         return filePath.toAbsolutePath().toString();
     }
 
-    @PostMapping("/upload")
-    public void upload(@RequestParam("file") MultipartFile file,
-                       @RequestParam("type") String type,
-                       @RequestParam("extraArgs") String extraArgs,
-                       @RequestParam("callbackUrl") String callbackUrl,
-                       @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
+    @PostMapping("/deltaUpload")
+    public void deltaUpload(@RequestParam("file") MultipartFile file,
+                            @RequestParam("type") String type,
+                            @RequestParam("extraArgs") String extraArgs,
+                            @RequestParam("callbackUrl") String callbackUrl,
+                            @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
         String tempFilePath = backupFile(file.getInputStream());
 
         // 校验文件格式
         DeltaFileValidator.validate(type, Paths.get(tempFilePath));
 
-        Job job = new Job(tempFilePath, type, extraArgs, callbackUrl, callbackArgs);
+        Job job = new Job(tempFilePath, "deltaUpload" + type, extraArgs, callbackUrl, callbackArgs);
 
         int id = jobMapper.addJob(job);
         job.setId(id);
@@ -76,7 +77,26 @@ public class MergeController {
                       @RequestParam("extraArgs") String extraArgs,
                       @RequestParam("callbackUrl") String callbackUrl,
                       @RequestParam("callbackArgs") String callbackArgs) {
-        Job job = new Job("", type, extraArgs, callbackUrl, callbackArgs);
+        Job job = new Job("", "merge" + type, extraArgs, callbackUrl, callbackArgs);
+
+        int id = jobMapper.addJob(job);
+        job.setId(id);
+
+        // 提交job到任务队列
+        scheduler.addTask(job);
+    }
+
+    @PostMapping("/appeal")
+    public void appeal(@RequestParam("file") MultipartFile file,
+                       @RequestParam("type") String type,
+                       @RequestParam("callbackUrl") String callbackUrl,
+                       @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
+        String tempFilePath = backupFile(file.getInputStream());
+
+        // 校验文件格式
+        AppealValidator.validate(type, Paths.get(tempFilePath));
+
+        Job job = new Job(tempFilePath, "appeal" + type, null, callbackUrl, callbackArgs);
 
         int id = jobMapper.addJob(job);
         job.setId(id);

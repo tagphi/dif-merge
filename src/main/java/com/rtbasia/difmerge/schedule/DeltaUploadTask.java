@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 
 @Component
 @Scope("prototype")
-public class DeltaUploadTask extends AbstractTask {
+public class DeltaUploadTask extends GenericJobTask {
     final static Logger logger = LoggerFactory.getLogger(DeltaUploadTask.class);
     final static ObjectMapper mapper = new ObjectMapper();
 
@@ -37,16 +37,13 @@ public class DeltaUploadTask extends AbstractTask {
     @Qualifier(value="remoteIpfs")
     private IPFSClient remoteIpfs;
 
-    private Job job;
-
     public DeltaUploadTask(Job job) {
-        super();
-        this.job = job;
+        super(job);
     }
 
     @Override
     @PerformanceLog
-    public void run() {
+    public String doRun() {
         String argsJsonStr = job.getExtraArgs();
         Map<String, Object> argsMap = null;
 
@@ -56,7 +53,8 @@ public class DeltaUploadTask extends AbstractTask {
         } catch (IOException e) {
             logger.error("failed to deserialize arg", e);
             progress("解析参数", "失败", e.getMessage());
-            return;
+
+            throw new IllegalStateException(e);
         }
 
         String oldHash = (String)argsMap.get("oldHash");
@@ -72,7 +70,8 @@ public class DeltaUploadTask extends AbstractTask {
             } catch (Exception e) {
                 logger.error("failed to download old list", e);
                 progress("下载旧列表", "失败", e.getMessage());
-                return;
+
+                throw new IllegalStateException(e);
             }
         }
 
@@ -88,9 +87,9 @@ public class DeltaUploadTask extends AbstractTask {
             } catch (IOException e) {
                 logger.error("failed to merge delta list to old list", e);
                 progress("合并", "失败", e.getMessage());
-            }
 
-            return null;
+                throw new IllegalStateException(e);
+            }
         };
 
         // 取得标识位为0的记录，为待删除
@@ -117,7 +116,7 @@ public class DeltaUploadTask extends AbstractTask {
             newList = merge(oldList, newItems, removeItems);
         } else {
             logger.warn("delta list is empty");
-            return; // 没有改动，不需要进行合并
+            return null;
         }
 
         // 3. 上传新文件到ipfs
@@ -133,12 +132,12 @@ public class DeltaUploadTask extends AbstractTask {
         } catch (IOException e) {
             logger.error("failed to upload new list to ipfs", e);
             progress("上传新列表", "失败", e.getMessage());
-            return;
+
+            throw new IllegalStateException(e);
         }
 
         // 4. 回调callback url
-        logger.info("callback, update ledger ...");
-        progress("写入账本", "运行中", "");
+        return newHash;
     }
 
     public String merge(Set<String> oldList, Set<String> addItems, Set<String> removeItems) {

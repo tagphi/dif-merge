@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rtbasia.difmerge.aop.PerformanceLog;
 import com.rtbasia.difmerge.entity.Job;
 import com.rtbasia.difmerge.ipfs.IPFSClient;
-import com.rtbasia.difmerge.ipfs.IPFSFileMerger;
+import com.rtbasia.difmerge.ipfs.IPFSFileIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,26 +17,42 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public abstract class MergeTask extends AbstractTask {
+//TODO: 如果以后文件非常大，可能需要外排序和合并
+public abstract class MergeTask extends GenericJobTask {
     final static Logger logger = LoggerFactory.getLogger(MergeTask.class);
 
-    protected Job job;
     final static ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
     @Qualifier(value="localIpfs")
-    private IPFSClient localIpfs;
+    protected IPFSClient localIpfs;
 
     @Autowired
     @Qualifier(value="remoteIpfs")
-    private IPFSClient remoteIpfs;
+    protected IPFSClient remoteIpfs;
 
     public MergeTask(Job job) {
-        super();
-        this.job = job;
+        super(job);
     }
 
     public abstract int getQuorum();
+
+    protected Map<String, Object> getArgs() {
+        Map<String, Object> argsMap = null;
+
+        try {
+            String argsJsonStr = job.getExtraArgs();
+            argsMap = mapper.readValue(argsJsonStr, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (IOException e) {
+            logger.error("failed to deserialize arg", e);
+            progress("解析参数", "失败", e.getMessage());
+
+            throw new IllegalArgumentException(e);
+        }
+
+        return argsMap;
+    }
 
     @PerformanceLog
     public Map<String, Set<String>> merge() {
@@ -48,17 +64,7 @@ public abstract class MergeTask extends AbstractTask {
         // 5. 如果是ip类型，下载媒体ip，从第4步中删除媒体ip数据
         // 6. 上传最终结果到ipfs
         // 7. 回调，写入账本
-        String argsJsonStr = job.getExtraArgs();
-        Map<String, Object> argsMap = null;
-
-        try {
-            argsMap = mapper.readValue(argsJsonStr, new TypeReference<Map<String, Object>>() {
-            });
-        } catch (IOException e) {
-            logger.error("failed to deserialize arg", e);
-            progress("解析参数", "失败", e.getMessage());
-            return null;
-        }
+        Map<String, Object> argsMap = getArgs();
 
         List<String> blacklistHash = (List<String>)argsMap.get("blacklist");
 
@@ -67,7 +73,7 @@ public abstract class MergeTask extends AbstractTask {
         // 处理各公司黑名单
         if (blacklistHash != null && blacklistHash.size() > 0) {
             try {
-                new IPFSFileMerger(blacklistHash, localIpfs).merge((line, hash) -> {
+                new IPFSFileIterator(blacklistHash, localIpfs).forEachLine((line, hash) -> {
                     if (mergedResultVotes.containsKey(line)) {
                         Set<String> hSet = mergedResultVotes.get(line);
                         hSet.add(hash);
@@ -88,7 +94,7 @@ public abstract class MergeTask extends AbstractTask {
             } catch (TimeoutException | IOException e) {
                 logger.error("failed to download file", e);
                 progress("合并黑名单失败","运行中", e.getMessage());
-                return null;
+                throw new IllegalStateException(e);
             }
 
             int quorum =  getQuorum();
@@ -109,19 +115,19 @@ public abstract class MergeTask extends AbstractTask {
         // 处理移除列表
         if (removelistsHash != null && removelistsHash.size() > 0) {
             try {
-                new IPFSFileMerger(removelistsHash, localIpfs).merge((line, hash) -> {
+                new IPFSFileIterator(removelistsHash, localIpfs).forEachLine((line, hash) -> {
                     mergedResultVotes.remove(line);
 
                     return mergedResultVotes;
                 }, (i, total) -> {
-                    String step = String.format("处理移除(%d/%d)", i, blacklistHash.size());
-                    progress(step,"合并黑名单失败","运行中");
+                    String step = String.format("处理移除(%d/%d)", i, removelistsHash.size());
+                    progress(step,"运行中","");
                 });
             } catch (TimeoutException | IOException e) {
                 logger.error("failed to download file", e);
 
-                progress("合并移除列表","运行中", e.getMessage());
-                return null;
+                progress("合并移除列表","失败", e.getMessage());
+                throw new IllegalStateException(e);
             }
         }
 
@@ -130,12 +136,12 @@ public abstract class MergeTask extends AbstractTask {
 
     @Override
     @PerformanceLog
-    public void run() {
+    public String doRun() {
         Map<String, Set<String>> mergedResult = merge();
         String hash = null;
 
         if (mergedResult == null) {
-            return;
+            return "";
         }
 
         // 上传到ipfs
@@ -150,5 +156,7 @@ public abstract class MergeTask extends AbstractTask {
         }
 
         logger.info("uploaded merged result to ipfs, hash: " + hash);
+
+        return hash;
     }
 }
