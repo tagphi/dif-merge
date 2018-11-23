@@ -43,7 +43,7 @@ public class DeltaUploadTask extends GenericJobTask {
 
     @Override
     @PerformanceLog
-    public String doRun() {
+    public void doRun() {
         String argsJsonStr = job.getExtraArgs();
         Map<String, Object> argsMap = null;
 
@@ -116,7 +116,7 @@ public class DeltaUploadTask extends GenericJobTask {
             newList = merge(oldList, newItems, removeItems);
         } else {
             logger.warn("delta list is empty");
-            return null;
+            return;
         }
 
         // 3. 上传新文件到ipfs
@@ -136,8 +136,27 @@ public class DeltaUploadTask extends GenericJobTask {
             throw new IllegalStateException(e);
         }
 
-        // 4. 回调callback url
-        return newHash;
+        // 4. 上传增量到ipfs
+        logger.info("upload new delta file to ipfs ...");
+        progress("上传增量列表", "运行中", "");
+
+        String deltaHash = null;
+
+        try {
+            deltaHash = remoteIpfs.upload(job.getTempFilePath()).hash.toBase58();
+
+            logger.info("upload delta file complete, hash: " + deltaHash);
+        } catch (IOException e) {
+            logger.error("failed to upload delta list to ipfs", e);
+            progress("上传增量列表", "失败", e.getMessage());
+
+            throw new IllegalStateException(e);
+        }
+
+        job.putExtCallbackArgs("fullHash", newHash);
+        job.putExtCallbackArgs("deltaHash", deltaHash);
+
+        return;
     }
 
     public String merge(Set<String> oldList, Set<String> addItems, Set<String> removeItems) {

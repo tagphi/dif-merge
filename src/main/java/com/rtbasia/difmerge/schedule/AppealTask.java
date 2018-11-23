@@ -29,7 +29,7 @@ public class AppealTask extends GenericJobTask {
     }
 
     @Override
-    public String doRun() {
+    public void doRun() {
         // 上传文件到ipfs
         logger.info("upload new file to ipfs ...");
         progress("上传申诉文件", "运行中", "");
@@ -47,6 +47,8 @@ public class AppealTask extends GenericJobTask {
             throw new IllegalStateException(e);
         }
 
-        return newHash;
+        job.putExtCallbackArgs("hash", newHash);
+
+        return;
     }
 }

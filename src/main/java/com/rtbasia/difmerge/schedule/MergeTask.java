@@ -136,12 +136,12 @@ public abstract class MergeTask extends GenericJobTask {
 
     @Override
     @PerformanceLog
-    public String doRun() {
+    public void doRun() {
         Map<String, Set<String>> mergedResult = merge();
         String hash = null;
 
         if (mergedResult == null) {
-            return "";
+            return;
         }
 
         // 上传到ipfs
@@ -157,6 +157,6 @@ public abstract class MergeTask extends GenericJobTask {
 
         logger.info("uploaded merged result to ipfs, hash: " + hash);
 
-        return hash;
+        job.putExtCallbackArgs("hash", hash);
     }
 }

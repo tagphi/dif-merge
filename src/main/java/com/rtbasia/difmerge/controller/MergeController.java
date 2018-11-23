@@ -1,6 +1,7 @@
 package com.rtbasia.difmerge.controller;
 
 import com.rtbasia.difmerge.entity.Job;
+import com.rtbasia.difmerge.http.ListJobResponse;
 import com.rtbasia.difmerge.http.SubmitResponse;
 import com.rtbasia.difmerge.mapper.JobMapper;
 import com.rtbasia.difmerge.schedule.Scheduler;
@@ -10,6 +11,7 @@ import com.rtbasia.difmerge.validator.DeltaFileValidator;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +22,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -58,7 +61,8 @@ public class MergeController {
                                       @RequestParam("type") String type,
                                       @RequestParam("extraArgs") String extraArgs,
                                       @RequestParam("callbackUrl") String callbackUrl,
-                                      @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
+                                      @RequestParam("callbackArgs") String callbackArgs)
+            throws IOException, FileFormatException {
         String tempFilePath = backupFile(file.getInputStream());
 
         // 校验文件格式
@@ -66,8 +70,7 @@ public class MergeController {
 
         Job job = new Job(tempFilePath, "deltaUpload" + type, extraArgs, callbackUrl, callbackArgs);
 
-        int id = jobMapper.addJob(job);
-        job.setId(id);
+        jobMapper.addJob(job);
 
         // 提交job到任务队列
         scheduler.addTask(job);
@@ -82,8 +85,7 @@ public class MergeController {
                       @RequestParam("callbackArgs") String callbackArgs) {
         Job job = new Job("", "merge" + type, extraArgs, callbackUrl, callbackArgs);
 
-        int id = jobMapper.addJob(job);
-        job.setId(id);
+        jobMapper.addJob(job);
 
         // 提交job到任务队列
         scheduler.addTask(job);
@@ -93,9 +95,10 @@ public class MergeController {
 
     @PostMapping("/appeal")
     public SubmitResponse appeal(@RequestParam("file") MultipartFile file,
-                       @RequestParam("type") String type,
-                       @RequestParam("callbackUrl") String callbackUrl,
-                       @RequestParam("callbackArgs") String callbackArgs) throws IOException, FileFormatException {
+                                 @RequestParam("type") String type,
+                                 @RequestParam("callbackUrl") String callbackUrl,
+                                 @RequestParam("callbackArgs") String callbackArgs)
+            throws IOException, FileFormatException {
         String tempFilePath = backupFile(file.getInputStream());
 
         // 校验文件格式
@@ -103,12 +106,26 @@ public class MergeController {
 
         Job job = new Job(tempFilePath, "appeal" + type, null, callbackUrl, callbackArgs);
 
-        int id = jobMapper.addJob(job);
-        job.setId(id);
+        jobMapper.addJob(job);
 
         // 提交job到任务队列
         scheduler.addTask(job);
 
         return SubmitResponse.ok();
+    }
+
+    @GetMapping("/jobs")
+    public ListJobResponse listJob(@RequestParam("start") int start,
+                                   @RequestParam("end") int end) {
+        int total = jobMapper.getTotal();
+
+        List<Job> jobs = jobMapper.listJobs(start, end);
+
+        ListJobResponse response = new ListJobResponse();
+
+        response.setTotal(total);
+        response.setJobs(jobs);
+
+        return response;
     }
 }

@@ -5,7 +5,10 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Clob;
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Job {
     private int id;
@@ -19,6 +22,30 @@ public class Job {
     private String status;
     private Timestamp createTime;
     private Timestamp modifiedTime;
+    private Map<String, Object> extCallbackArgs = new HashMap<>();
+
+    public Job(int id,
+               String tempFilePath,
+               String action,
+               String extraArgs,
+               String callbackUrl,
+               String callbackArgs,
+               String step,
+               String status,
+               String message,
+               Timestamp createTime,
+               Timestamp modifiedTime) {
+        this.tempFilePath = tempFilePath;
+        this.action = action;
+        this.extraArgs = extraArgs;
+        this.callbackUrl = callbackUrl;
+        this.callbackArgs = callbackArgs;
+        this.step = step;
+        this.message = message;
+        this.status = status;
+        this.createTime = createTime;
+        this.modifiedTime = modifiedTime;
+    }
 
     public Job(String tempFilePath,
                String action,
@@ -127,5 +154,13 @@ public class Job {
         if (!StringUtils.isEmpty(tempFilePath)) {
             Files.deleteIfExists(Paths.get(tempFilePath));
         }
+    }
+
+    public void putExtCallbackArgs(String key, Object value) {
+        this.extCallbackArgs.put(key, value);
+    }
+
+    public Map<String, Object> getExtCallbackArgs() {
+        return extCallbackArgs;
     }
 }
