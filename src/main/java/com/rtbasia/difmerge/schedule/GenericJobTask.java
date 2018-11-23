@@ -34,15 +34,10 @@ public abstract class GenericJobTask extends AbstractTask {
     public void run() {
         String hash = doRun();
 
-        // 清理临时文件
-        String tempFilePath = job.getTempFilePath();
-
-        if (!StringUtils.isEmpty(tempFilePath)) {
-            try {
-                Files.deleteIfExists(Paths.get(tempFilePath));
-            } catch (IOException e) {
-                logger.error("failed to delete temp file " + tempFilePath, e);
-            }
+        try {
+            job.cleanTempFile();
+        } catch (IOException e) {
+            logger.error("failed to delete temp file", e);
         }
 
         callback(hash, job);

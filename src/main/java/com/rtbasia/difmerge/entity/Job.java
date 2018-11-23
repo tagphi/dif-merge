@@ -1,5 +1,11 @@
 package com.rtbasia.difmerge.entity;
 
+import org.springframework.util.StringUtils;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 public class Job {
     private int id;
     private String tempFilePath;
@@ -93,5 +99,14 @@ public class Job {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public void cleanTempFile() throws IOException {
+        // 清理临时文件
+        String tempFilePath = this.getTempFilePath();
+
+        if (!StringUtils.isEmpty(tempFilePath)) {
+            Files.deleteIfExists(Paths.get(tempFilePath));
+        }
     }
 }
