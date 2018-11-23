@@ -36,6 +36,8 @@ public class Scheduler implements ApplicationContextAware {
             return ctx.getBean(DefaultDeviceMergeTask.class, job);
         } else if (action.startsWith("appeal")) {
             return ctx.getBean(AppealTask.class, job);
+        } else if ("uploadPublisherIp".equals(action)) {
+            return ctx.getBean(PublisherIpTask.class, job);
         } else {
             throw new IllegalArgumentException("unkown action " + action);
         }

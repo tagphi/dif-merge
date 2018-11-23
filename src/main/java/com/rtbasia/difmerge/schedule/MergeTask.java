@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import java.awt.*;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -66,22 +68,35 @@ public abstract class MergeTask extends GenericJobTask {
         // 7. 回调，写入账本
         Map<String, Object> argsMap = getArgs();
 
-        List<String> blacklistHash = (List<String>)argsMap.get("blacklist");
+        List<String> blacklist = (List<String>)argsMap.get("blacklist");
+
+        final Map<String, String> hashOrgMap = new HashMap<>();
+
+        try {
+            hashOrgMap.putAll(blacklist.stream()
+                    .map(c -> c.split(":")).collect(Collectors.toMap(l -> l[1], l -> l[0])));
+        } catch (Exception e) {
+            logger.error("invalid black list format, should be org:hash pair");
+            progress("解析参数", "失败", e.getMessage());
+            throw e;
+        }
 
         Map<String, Set<String>> mergedResultVotes =  new ConcurrentHashMap<>();
 
         // 处理各公司黑名单
+        Set<String> blacklistHash = hashOrgMap.keySet();
+
         if (blacklistHash != null && blacklistHash.size() > 0) {
             try {
                 new IPFSFileIterator(blacklistHash, localIpfs).forEachLine((line, hash) -> {
                     if (mergedResultVotes.containsKey(line)) {
                         Set<String> hSet = mergedResultVotes.get(line);
-                        hSet.add(hash);
+                        hSet.add(hashOrgMap.get(hash));
 
                         mergedResultVotes.put(line, hSet);
                     } else {
                         Set<String> hSet = new HashSet<>();
-                        hSet.add(hash);
+                        hSet.add(hashOrgMap.get(hash));
 
                         mergedResultVotes.put(line, hSet);
                     }

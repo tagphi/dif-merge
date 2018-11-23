@@ -95,7 +95,7 @@ public class DeltaUploadTask extends GenericJobTask {
         // 取得标识位为0的记录，为待删除
         Set<String> removeItems = supplier.get().map(l -> l.split("\t"))
                 .filter(c -> "0".equals(c[c.length - 1]))
-                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 2)))
+                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 1)))
                 .distinct()
                 .collect(Collectors.toSet());
 
@@ -104,7 +104,7 @@ public class DeltaUploadTask extends GenericJobTask {
         // 取得标志位为1的记录，为增加
         Set<String> newItems = supplier.get().map(l -> l.split("\t"))
                 .filter(c -> "1".equals(c[c.length - 1]))
-                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 2)))
+                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 1)))
                 .distinct()
                 .collect(Collectors.toSet());
 
@@ -143,7 +143,7 @@ public class DeltaUploadTask extends GenericJobTask {
         String deltaHash = null;
 
         try {
-            deltaHash = remoteIpfs.upload(job.getTempFilePath()).hash.toBase58();
+            deltaHash = remoteIpfs.uploadFile(job.getTempFilePath()).hash.toBase58();
 
             logger.info("upload delta file complete, hash: " + deltaHash);
         } catch (IOException e) {

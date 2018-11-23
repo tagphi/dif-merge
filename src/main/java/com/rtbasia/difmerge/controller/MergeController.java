@@ -8,6 +8,7 @@ import com.rtbasia.difmerge.schedule.Scheduler;
 import com.rtbasia.difmerge.validator.AppealValidator;
 import com.rtbasia.difmerge.validator.FileFormatException;
 import com.rtbasia.difmerge.validator.DeltaFileValidator;
+import com.rtbasia.difmerge.validator.IpAppealValidator;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -105,6 +106,26 @@ public class MergeController {
         AppealValidator.validate(type, Paths.get(tempFilePath));
 
         Job job = new Job(tempFilePath, "appeal" + type, null, callbackUrl, callbackArgs);
+
+        jobMapper.addJob(job);
+
+        // 提交job到任务队列
+        scheduler.addTask(job);
+
+        return SubmitResponse.ok();
+    }
+
+    @PostMapping("/publisherIp")
+    public SubmitResponse uploadPublisherIp(@RequestParam("file") MultipartFile file,
+                                            @RequestParam("callbackUrl") String callbackUrl,
+                                            @RequestParam("callbackArgs") String callbackArgs)
+            throws IOException, FileFormatException {
+        String tempFilePath = backupFile(file.getInputStream());
+
+        // 校验文件格式
+        new IpAppealValidator(Paths.get(tempFilePath)).validate();
+
+        Job job = new Job(tempFilePath, "uploadPublisherIp", null, callbackUrl, callbackArgs);
 
         jobMapper.addJob(job);
 

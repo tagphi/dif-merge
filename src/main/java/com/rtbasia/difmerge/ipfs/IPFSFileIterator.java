@@ -6,19 +6,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class IPFSFileIterator {
     final static Logger logger = LoggerFactory.getLogger(MergeTask.class);
 
-    public List<String> someHash;
+    public Collection<String> someHash;
     public IPFSClient ipfs;
 
-    public IPFSFileIterator(List<String> someHash, IPFSClient ipfsClient) {
+    public IPFSFileIterator(Collection<String> someHash, IPFSClient ipfsClient) {
         this.someHash = someHash;
         this.ipfs = ipfsClient;
     }
