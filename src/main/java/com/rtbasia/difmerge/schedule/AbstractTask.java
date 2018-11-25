@@ -3,9 +3,21 @@ package com.rtbasia.difmerge.schedule;
 public abstract class AbstractTask implements Runnable {
     protected ProgressLisener progressLisener;
 
-    protected void progress(String progress, String status, String message) {
+    protected void beginStep(String progress) {
         if (progressLisener != null) {
-            progressLisener.onProgress(progress, status, message);
+            progressLisener.onStart(progress);
+        }
+    }
+
+    protected void onError(String message) {
+        if (progressLisener != null) {
+            progressLisener.onError(message);
+        }
+    }
+
+    protected void endStep() {
+        if (progressLisener != null) {
+            progressLisener.onComplete();
         }
     }
 

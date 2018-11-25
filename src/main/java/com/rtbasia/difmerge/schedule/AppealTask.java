@@ -32,7 +32,7 @@ public class AppealTask extends GenericJobTask {
     public void doRun() {
         // 上传文件到ipfs
         logger.info("upload new file to ipfs ...");
-        progress("上传申诉文件", "运行中", "");
+        beginStep("上传申诉文件");
 
         String newHash = null;
 
@@ -42,13 +42,13 @@ public class AppealTask extends GenericJobTask {
             logger.info("upload new file complete, hash: " + newHash);
         } catch (IOException e) {
             logger.error("failed to upload new list to ipfs", e);
-            progress("上传申诉文件", "失败", e.getMessage());
+            onError(e.getMessage());
 
             throw new IllegalStateException(e);
         }
 
-        job.putExtCallbackArgs("hash", newHash);
+        endStep();
 
-        return;
+        job.putExtCallbackArgs("hash", newHash);
     }
 }

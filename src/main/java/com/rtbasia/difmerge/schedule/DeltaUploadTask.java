@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,6 +42,14 @@ public class DeltaUploadTask extends GenericJobTask {
         super(job);
     }
 
+    private Set<String> filterByFlag(Stream<String> stream, String flag) {
+        return stream.map(l -> l.split("\t"))
+                .filter(c -> flag.equals(c[c.length - 1]))
+                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 1)))
+                .distinct()
+                .collect(Collectors.toSet());
+    }
+
     @Override
     @PerformanceLog
     public void doRun() {
@@ -48,115 +57,78 @@ public class DeltaUploadTask extends GenericJobTask {
         Map<String, Object> argsMap = null;
 
         try {
+            beginStep("解析参数");
             argsMap = mapper.readValue(argsJsonStr, new TypeReference<Map<String, Object>>() {
             });
-        } catch (IOException e) {
-            logger.error("failed to deserialize arg", e);
-            progress("解析参数", "失败", e.getMessage());
+            endStep();
 
-            throw new IllegalStateException(e);
-        }
+            String oldHash = (String) argsMap.get("oldHash");
+            Set<String> oldList = null;
 
-        String oldHash = (String)argsMap.get("oldHash");
-        Set<String> oldList = null;
+            if (oldHash != null) {
+                // 1. 下载旧列表
+                beginStep("下载旧列表");
+                logger.info("download old file: " + oldHash);
 
-        if (oldHash != null) {
-            // 1. 下载旧列表
-            logger.info("download old file: " + oldHash);
-            progress("下载旧列表", "运行中", "");
-
-            try {
-                oldList =  new HashSet(Arrays.asList(new String(localIpfs.cat(oldHash)).split("\n")));
-            } catch (Exception e) {
-                logger.error("failed to download old list", e);
-                progress("下载旧列表", "失败", e.getMessage());
-
-                throw new IllegalStateException(e);
+                oldList = new HashSet(Arrays.asList(new String(localIpfs.cat(oldHash)).split("\n")));
             }
-        }
 
-        // 2. 进行合并
-        logger.info("merging ...");
-        progress("合并", "运行中", "");
+            // 2. 进行合并
+            logger.info("merging ...");
+            beginStep("合并");
 
-        HashSet<String> deltaList = null;
+            HashSet<String> deltaList = null;
 
-        Supplier<Stream<String>> supplier = () -> {
-            try {
-                return Files.lines(Paths.get(job.getTempFilePath()));
-            } catch (IOException e) {
-                logger.error("failed to merge delta list to old list", e);
-                progress("合并", "失败", e.getMessage());
+            Supplier<Stream<String>> supplier = () -> {
+                try {
+                    return Files.lines(Paths.get(job.getTempFilePath()));
+                } catch (IOException e) {
+                    logger.error("failed to merge delta list to old list", e);
+                    onError(e.getMessage());
 
-                throw new IllegalStateException(e);
+                    throw new IllegalStateException(e);
+                }
+            };
+
+            // 取得标识位为0的记录，为待删除
+            Set<String> removeItems = filterByFlag(supplier.get(), "0");
+            logger.info(String.format("delete %d records \n", removeItems.size()));
+
+            // 取得标志位为1的记录，为增加
+            Set<String> newItems = filterByFlag(supplier.get(), "1");
+            logger.info(String.format("add %d records \n", newItems.size()));
+            String newList = null;
+
+            if (removeItems.size() > 0 || newItems.size() > 0) {
+                newList = merge(oldList, newItems, removeItems);
+            } else {
+                logger.warn("delta list is empty");
+                return;
             }
-        };
 
-        // 取得标识位为0的记录，为待删除
-        Set<String> removeItems = supplier.get().map(l -> l.split("\t"))
-                .filter(c -> "0".equals(c[c.length - 1]))
-                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 1)))
-                .distinct()
-                .collect(Collectors.toSet());
+            endStep();
 
-        logger.info(String.format("delete %d records \n", removeItems.size()));
-
-        // 取得标志位为1的记录，为增加
-        Set<String> newItems = supplier.get().map(l -> l.split("\t"))
-                .filter(c -> "1".equals(c[c.length - 1]))
-                .map(c -> String.join("\t", Arrays.asList(c).subList(0, c.length - 1)))
-                .distinct()
-                .collect(Collectors.toSet());
-
-        logger.info(String.format("add %d records \n", newItems.size()));
-
-        String newList = null;
-
-        if (removeItems.size() > 0 || newItems.size() > 0) {
-            newList = merge(oldList, newItems, removeItems);
-        } else {
-            logger.warn("delta list is empty");
-            return;
-        }
-
-        // 3. 上传新文件到ipfs
-        logger.info("upload new file to ipfs ...");
-        progress("上传新列表", "运行中", "");
-
-        String newHash = null;
-
-        try {
-            newHash = remoteIpfs.upload(newList).hash.toBase58();
-
+            // 3. 上传新文件到ipfs
+            logger.info("upload new file to ipfs ...");
+            beginStep("上传新列表");
+            String newHash = remoteIpfs.upload(newList).hash.toBase58();
             logger.info("upload new file complete, hash: " + newHash);
-        } catch (IOException e) {
-            logger.error("failed to upload new list to ipfs", e);
-            progress("上传新列表", "失败", e.getMessage());
+            endStep();
 
-            throw new IllegalStateException(e);
-        }
-
-        // 4. 上传增量到ipfs
-        logger.info("upload new delta file to ipfs ...");
-        progress("上传增量列表", "运行中", "");
-
-        String deltaHash = null;
-
-        try {
-            deltaHash = remoteIpfs.uploadFile(job.getTempFilePath()).hash.toBase58();
-
+            // 4. 上传增量到ipfs
+            logger.info("upload new delta file to ipfs ...");
+            beginStep("上传增量列表");
+            String deltaHash = remoteIpfs.uploadFile(job.getTempFilePath()).hash.toBase58();
             logger.info("upload delta file complete, hash: " + deltaHash);
-        } catch (IOException e) {
-            logger.error("failed to upload delta list to ipfs", e);
-            progress("上传增量列表", "失败", e.getMessage());
+            endStep();
+
+            job.putExtCallbackArgs("fullHash", newHash);
+            job.putExtCallbackArgs("deltaHash", deltaHash);
+        } catch (IOException | TimeoutException e) {
+            onError(e.getMessage());
 
             throw new IllegalStateException(e);
         }
-
-        job.putExtCallbackArgs("fullHash", newHash);
-        job.putExtCallbackArgs("deltaHash", deltaHash);
-
-        return;
     }
 
     public String merge(Set<String> oldList, Set<String> addItems, Set<String> removeItems) {

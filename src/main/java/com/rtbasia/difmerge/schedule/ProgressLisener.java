@@ -1,5 +1,7 @@
 package com.rtbasia.difmerge.schedule;
 
 public interface ProgressLisener {
-    void onProgress(String step, String status, String message);
+    void onStart(String step);
+    void onError(String message);
+    void onComplete();
 }

@@ -35,15 +35,17 @@ public class IPMergeTask extends MergeTask {
                     return mergeResult;
                 }, (i, total) -> {
                     String step = String.format("移除媒体IP(%d/%d)", i, publisherIpHash.size());
-                    progress(step,"运行中","");
+                    beginStep(step);
                 });
             } catch (TimeoutException | IOException e) {
                 logger.error("failed to download file", e);
 
-                progress("下载媒体IP","失败", e.getMessage());
+                onError(e.getMessage());
                 throw new IllegalStateException(e);
             }
         }
+
+        endStep();
 
         return mergeResult;
     }

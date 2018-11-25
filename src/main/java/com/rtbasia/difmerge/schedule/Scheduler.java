@@ -48,12 +48,34 @@ public class Scheduler implements ApplicationContextAware {
 
         task.addProgressLisener(new ProgressLisener() {
             @Override
-            public void onProgress(String step, String status, String message) {
-                logger.info(String.format("Step: %s, Status: %s, Message: %s", step, status, message));
-
-                job.setMessage(message);
+            public void onStart(String step) {
+                job.setMessage("");
                 job.setStep(step);
-                job.setStatus(status);
+                job.setStatus("运行中");
+
+                logger.info(String.format("Step: %s, Status: %s, Message: %s",
+                        job.getStep(), job.getStatus(), job.getMessage()));
+
+                jobMapper.updateJob(job);
+            }
+
+            @Override
+            public void onError(String message) {
+                job.setMessage(message);
+                job.setStatus("失败");
+
+                logger.error(String.format("Step: %s, Status: %s, Message: %s",
+                        job.getStep(), job.getStatus(), job.getMessage()));
+
+                jobMapper.updateJob(job);
+            }
+
+            @Override
+            public void onComplete() {
+                job.setStatus("成功");
+
+                logger.info(String.format("Step: %s, Status: %s, Message: %s",
+                        job.getStep(), job.getStatus(), job.getMessage()));
 
                 jobMapper.updateJob(job);
             }

@@ -48,7 +48,7 @@ public abstract class MergeTask extends GenericJobTask {
             });
         } catch (IOException e) {
             logger.error("failed to deserialize arg", e);
-            progress("解析参数", "失败", e.getMessage());
+            onError(e.getMessage());
 
             throw new IllegalArgumentException(e);
         }
@@ -66,20 +66,28 @@ public abstract class MergeTask extends GenericJobTask {
         // 5. 如果是ip类型，下载媒体ip，从第4步中删除媒体ip数据
         // 6. 上传最终结果到ipfs
         // 7. 回调，写入账本
-        Map<String, Object> argsMap = getArgs();
-
-        List<String> blacklist = (List<String>)argsMap.get("blacklist");
 
         final Map<String, String> hashOrgMap = new HashMap<>();
 
+        beginStep("解析参数");
+
+        Map<String, Object> argsMap = null;
+
         try {
+            argsMap = getArgs();
+
+            List<String> blacklist = (List<String>)argsMap.get("blacklist");
+
             hashOrgMap.putAll(blacklist.stream()
                     .map(c -> c.split(":")).collect(Collectors.toMap(l -> l[1], l -> l[0])));
         } catch (Exception e) {
-            logger.error("invalid black list format, should be org:hash pair");
-            progress("解析参数", "失败", e.getMessage());
+            logger.error("invalid black list format");
+
+            onError(e.getMessage());
             throw e;
         }
+
+        endStep();
 
         Map<String, Set<String>> mergedResultVotes =  new ConcurrentHashMap<>();
 
@@ -104,13 +112,16 @@ public abstract class MergeTask extends GenericJobTask {
                     return mergedResultVotes;
                 }, (j, total) -> {
                     String step = String.format("合并黑名单(%d/%d)", j, blacklistHash.size());
-                    progress(step,"运行中", "");
+                    beginStep(step);
                 });
             } catch (TimeoutException | IOException e) {
                 logger.error("failed to download file", e);
-                progress("合并黑名单失败","运行中", e.getMessage());
+                onError(e.getMessage());
+
                 throw new IllegalStateException(e);
             }
+
+            endStep();
 
             int quorum =  getQuorum();
 
@@ -136,14 +147,16 @@ public abstract class MergeTask extends GenericJobTask {
                     return mergedResultVotes;
                 }, (i, total) -> {
                     String step = String.format("处理移除(%d/%d)", i, removelistsHash.size());
-                    progress(step,"运行中","");
+                    beginStep(step);
                 });
             } catch (TimeoutException | IOException e) {
                 logger.error("failed to download file", e);
 
-                progress("合并移除列表","失败", e.getMessage());
+                onError(e.getMessage());
                 throw new IllegalStateException(e);
             }
+
+            endStep();
         }
 
         return mergedResultVotes;
@@ -160,6 +173,8 @@ public abstract class MergeTask extends GenericJobTask {
         }
 
         // 上传到ipfs
+        beginStep("上传结果");
+
         try {
             hash = remoteIpfs.upload(mergedResult.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey))
                     .map(c -> String.format("%s:%s", c.getKey(),
@@ -167,8 +182,10 @@ public abstract class MergeTask extends GenericJobTask {
                     .collect(Collectors.joining("\n"))).hash.toBase58();
         } catch (IOException e) {
             logger.error("failed to upload to ipfs", e);
-            progress("上传失败", "失败", e.getMessage());
+            onError(e.getMessage());
         }
+
+        endStep();
 
         logger.info("uploaded merged result to ipfs, hash: " + hash);
 

@@ -21,6 +21,6 @@ public interface JobMapper {
     @Select("select count(*) from jobs")
     public Integer getTotal();
 
-    @Select("select * from jobs limit #{arg0}, #{arg1}")
+    @Select("select * from jobs order by modifiedTime desc limit #{arg0}, #{arg1}")
     public List<Job> listJobs(int start, int end);
 }

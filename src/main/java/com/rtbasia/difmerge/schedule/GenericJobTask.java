@@ -55,15 +55,19 @@ public abstract class GenericJobTask extends AbstractTask {
         String argsJsonStr = job.getCallbackArgs();
 
         if (!StringUtils.isEmpty(argsJsonStr)) {
+            beginStep("解析回调参数");
+
             try {
                 callbackArgsMap = mapper.readValue(argsJsonStr, new TypeReference<Map<String, Object>>() {
                 });
             } catch (IOException e) {
                 logger.error("failed to deserialize arg", e);
-                progress("解析回调参数", "失败", e.getMessage());
+                onError(e.getMessage());
 
                 throw new IllegalArgumentException(e);
             }
+
+            endStep();
         } else {
             callbackArgsMap = new HashMap<>();
         }
@@ -75,16 +79,16 @@ public abstract class GenericJobTask extends AbstractTask {
         }
 
         logger.info("callback, update ledger ...");
-        progress("写入账本", "运行中", "");
-
-        Map response = null;
+        beginStep("写入账本");
 
         try {
-            response = template.postForEntity(job.getCallbackUrl(), callbackArgsMap, Map.class).getBody();
+            Map response = template.postForEntity(job.getCallbackUrl(), callbackArgsMap, Map.class).getBody();
         } catch (RestClientException e) {
-            progress("写入账本", "失败", e.getMessage());
+            onError(e.getMessage());
 
             throw e;
         }
+
+        endStep();
     }
 }
