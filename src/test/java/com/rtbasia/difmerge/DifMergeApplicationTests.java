@@ -12,7 +12,9 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -60,5 +62,14 @@ public class DifMergeApplicationTests {
         boolean exists = localClient.fileExists(node.hash.toBase58());
 
         Assert.assertTrue(exists);
+    }
+
+    @Test
+    public void testStat() throws IOException {
+        MerkleNode node = remoteClient.upload(UUID.randomUUID().toString());
+
+        Map<String, Object> result = localClient.stat(node.hash.toBase58());
+
+        Assert.assertTrue(result.size() > 0);
     }
 }

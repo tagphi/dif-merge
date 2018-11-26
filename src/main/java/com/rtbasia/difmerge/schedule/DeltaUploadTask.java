@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -70,7 +71,13 @@ public class DeltaUploadTask extends GenericJobTask {
                 beginStep("下载旧列表");
                 logger.info("download old file: " + oldHash);
 
+                if (!localIpfs.fileExists(oldHash)) {
+                    throw new FileNotFoundException(oldHash);
+                }
+
                 oldList = new HashSet(Arrays.asList(new String(localIpfs.cat(oldHash)).split("\n")));
+
+                endStep();
             }
 
             // 2. 进行合并

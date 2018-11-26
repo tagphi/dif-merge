@@ -6,12 +6,16 @@ import io.ipfs.api.IPFS;
 import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
 import io.ipfs.multihash.Multihash;
+import jdk.internal.util.xml.impl.Input;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 public class IPFSClient {
@@ -117,5 +121,15 @@ public class IPFSClient {
     @PerformanceLog
     public byte[] cat(String base58Hash) throws TimeoutException, IOException {
         return this.cat(base58Hash, defaultDownloadTimeoutSecs, TimeUnit.SECONDS);
+    }
+
+    public Map<String, Object> stat(String base58Hash) throws IOException {
+        return ipfs.object.stat(Multihash.fromBase58(base58Hash));
+    }
+
+    public InputStream catStream(String base58Hash) throws  TimeoutException, IOException {
+        Multihash hash = Multihash.fromBase58(base58Hash);
+
+        return ipfs.catStream(hash);
     }
 }

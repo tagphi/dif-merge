@@ -3,31 +3,40 @@ package com.rtbasia.difmerge.controller;
 import com.rtbasia.difmerge.entity.Job;
 import com.rtbasia.difmerge.http.ListJobResponse;
 import com.rtbasia.difmerge.http.SubmitResponse;
+import com.rtbasia.difmerge.ipfs.IPFSClient;
 import com.rtbasia.difmerge.mapper.JobMapper;
+import com.rtbasia.difmerge.schedule.AppealTask;
 import com.rtbasia.difmerge.schedule.Scheduler;
 import com.rtbasia.difmerge.validator.AppealValidator;
 import com.rtbasia.difmerge.validator.FileFormatException;
 import com.rtbasia.difmerge.validator.DeltaFileValidator;
 import com.rtbasia.difmerge.validator.IpAppealValidator;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 @RestController
 public class MergeController {
+    final static Logger logger = LoggerFactory.getLogger(MergeController.class);
+
     @Value("${spring.application.tempFileDir}")
     private String tempFileDir;
 
@@ -36,6 +45,10 @@ public class MergeController {
 
     @Autowired
     private Scheduler scheduler;
+
+    @Autowired
+    @Qualifier(value="localIpfs")
+    private IPFSClient localIpfs;
 
     /**
      * 拷贝待合并文件到临时目录
@@ -148,5 +161,31 @@ public class MergeController {
         response.setJobs(jobs);
 
         return response;
+    }
+
+    @RequestMapping(value = "/download/{hash}", method = RequestMethod.GET)
+    public void getFile(
+            @PathVariable("hash") String hash,
+            HttpServletResponse response) {
+        try {
+            response.setContentType("application/octet-stream");
+            response.setHeader(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
+
+            boolean exists = localIpfs.fileExists(hash);
+
+            if (!exists) {
+                response.sendError(HttpStatus.NOT_FOUND.value(), HttpStatus.NOT_FOUND.getReasonPhrase());
+                return;
+            }
+
+            InputStream is = localIpfs.catStream(hash);
+            IOUtils.copy(is, response.getOutputStream());
+
+            response.flushBuffer();
+        } catch (IOException | TimeoutException e) {
+            logger.info("error writing file to output stream, hash '{}'", hash, e);
+
+            throw new RuntimeException("IOError writing file to output stream", e);
+        }
     }
 }
