@@ -97,7 +97,7 @@ public class MergeController {
                       @RequestParam("extraArgs") String extraArgs,
                       @RequestParam("callbackUrl") String callbackUrl,
                       @RequestParam("callbackArgs") String callbackArgs) {
-        Job job = new Job("", "merge" + type, extraArgs, callbackUrl, callbackArgs);
+        Job job = new Job("", "merge-" + type, extraArgs, callbackUrl, callbackArgs);
 
         jobMapper.addJob(job);
 

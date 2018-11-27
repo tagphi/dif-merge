@@ -28,11 +28,11 @@ public class Scheduler implements ApplicationContextAware {
 
         if (action.startsWith("deltaUpload")) {
             return ctx.getBean(DeltaUploadTask.class, job);
-        } else if ("mergeDevice".equals(action)) {
+        } else if ("merge-device".equals(action)) {
             return ctx.getBean(DeviceMergeTask.class, job);
-        } else if ("mergeIP".equals(action)) {
+        } else if ("merge-ip".equals(action)) {
             return ctx.getBean(IPMergeTask.class, job);
-        } else if ("mergeDefaultDevice".equals(action)) {
+        } else if ("merge-default".equals(action)) {
             return ctx.getBean(DefaultDeviceMergeTask.class, job);
         } else if (action.startsWith("appeal")) {
             return ctx.getBean(AppealTask.class, job);
