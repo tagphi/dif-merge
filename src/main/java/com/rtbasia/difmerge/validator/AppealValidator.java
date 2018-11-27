@@ -9,7 +9,7 @@ public class AppealValidator {
             new IpAppealValidator(path).validate();
         } else if (type.equalsIgnoreCase("device")) {
             new DeviceAppealValidator(path).validate();
-        } else if (type.equalsIgnoreCase("default_device")) {
+        } else if (type.equalsIgnoreCase("defaultdevice")) {
             new DefaultDeviceAppealValidator(path).validate();
         } else {
             throw new IllegalArgumentException("unkown type " + type);
