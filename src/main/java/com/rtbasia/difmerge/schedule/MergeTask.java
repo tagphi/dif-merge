@@ -11,10 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
-import java.awt.*;
 import java.io.IOException;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -26,11 +24,11 @@ public abstract class MergeTask extends GenericJobTask {
     final static ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
-    @Qualifier(value="localIpfs")
+    @Qualifier(value = "localIpfs")
     protected IPFSClient localIpfs;
 
     @Autowired
-    @Qualifier(value="remoteIpfs")
+    @Qualifier(value = "remoteIpfs")
     protected IPFSClient remoteIpfs;
 
     public MergeTask(Job job) {
@@ -76,10 +74,14 @@ public abstract class MergeTask extends GenericJobTask {
         try {
             argsMap = getArgs();
 
-            List<String> blacklist = (List<String>)argsMap.get("blacklist");
+            List<String> blacklist = (List<String>) argsMap.get("blacklist");
 
-            hashOrgMap.putAll(blacklist.stream()
-                    .map(c -> c.split(":")).collect(Collectors.toMap(l -> l[1], l -> l[0])));
+            hashOrgMap.putAll(
+              blacklist
+                .stream()
+                .map(c -> c.split(":"))
+                .collect(Collectors.toMap(l -> l[1], l -> l[0]))
+            );
         } catch (Exception e) {
             logger.error("invalid black list format");
 
@@ -89,7 +91,7 @@ public abstract class MergeTask extends GenericJobTask {
 
         endStep();
 
-        Map<String, Set<String>> mergedResultVotes =  new ConcurrentHashMap<>();
+        Map<String, Set<String>> mergedResultVotes = new ConcurrentHashMap<>();
 
         // 处理各公司黑名单
         Set<String> blacklistHash = hashOrgMap.keySet();
@@ -123,7 +125,7 @@ public abstract class MergeTask extends GenericJobTask {
 
             endStep();
 
-            int quorum =  getQuorum();
+            int quorum = getQuorum();
 
             for (String key : mergedResultVotes.keySet()) {
                 if (mergedResultVotes.get(key).size() < quorum) {
@@ -136,7 +138,7 @@ public abstract class MergeTask extends GenericJobTask {
             }
         }
 
-        List<String> removelistsHash = (List<String>)argsMap.get("removelist");
+        List<String> removelistsHash = (List<String>) argsMap.get("removelist");
 
         // 处理移除列表
         if (removelistsHash != null && removelistsHash.size() > 0) {
@@ -177,9 +179,9 @@ public abstract class MergeTask extends GenericJobTask {
 
         try {
             hash = remoteIpfs.upload(mergedResult.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey))
-                    .map(c -> String.format("%s:%s", c.getKey(),
-                            c.getValue().stream().sorted().collect(Collectors.joining(","))))
-                    .collect(Collectors.joining("\n"))).hash.toBase58();
+              .map(c -> String.format("%s:%s", c.getKey(),
+                c.getValue().stream().sorted().collect(Collectors.joining(","))))
+              .collect(Collectors.joining("\n"))).hash.toBase58();
         } catch (IOException e) {
             logger.error("failed to upload to ipfs", e);
             onError(e.getMessage());
