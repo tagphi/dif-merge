@@ -1,10 +1,7 @@
 package com.rtbasia.difmerge.mapper;
 
 import com.rtbasia.difmerge.entity.Job;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Options;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
@@ -21,6 +18,6 @@ public interface JobMapper {
     @Select("select count(*) from jobs")
     public Integer getTotal();
 
-    @Select("select * from jobs order by modifiedTime desc limit #{arg0}, #{arg1}")
-    public List<Job> listJobs(int start, int end);
+    @Select("select * from jobs order by modifiedTime desc limit #{start}, #{end}")
+    public List<Job> listJobs(@Param("start")int start, @Param("end") int end);
 }
