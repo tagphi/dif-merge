@@ -83,12 +83,18 @@ public abstract class GenericJobTask extends AbstractTask {
 
         try {
             Map response = template.postForEntity(job.getCallbackUrl(), callbackArgsMap, Map.class).getBody();
+
+            boolean success = (Boolean)response.get("success");
+
+            if (success) {
+                endStep();
+            } else {
+                onError((String)response.get("message"));
+            }
         } catch (RestClientException e) {
             onError(e.getMessage());
 
             throw e;
         }
-
-        endStep();
     }
 }
