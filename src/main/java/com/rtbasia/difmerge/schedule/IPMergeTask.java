@@ -31,8 +31,6 @@ public class IPMergeTask extends MergeTask {
             try {
                 new IPFSFileIterator(publisherIpHash, localIpfs).forEachLine((line, hash) -> {
                     mergeResult.remove(line);
-
-                    return mergeResult;
                 }, (i, total) -> {
                     String step = String.format("移除媒体IP(%d/%d)", i, publisherIpHash.size());
                     beginStep(step);

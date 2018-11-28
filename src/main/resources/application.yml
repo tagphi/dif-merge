@@ -15,7 +15,7 @@ spring:
         port: 5001
         check-exists-timeout-secs: 3
         download-timeout-secs: 600
-    tempFileDir: ./temp/
+    tempFileDir: ../temp/
   servlet:
     multipart:
       max-file-size: 200MB
@@ -26,3 +26,8 @@ spring:
     url: jdbc:h2:mem:db_jobs;MODE=MYSQL;INIT=RUNSCRIPT FROM 'classpath:scripts/init_table.sql'
     username:
     password:
+
+logging:
+  level:
+    root: INFO
+  file: ../log/server.log

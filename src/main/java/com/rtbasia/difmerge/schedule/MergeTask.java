@@ -65,23 +65,17 @@ public abstract class MergeTask extends GenericJobTask {
         // 6. 上传最终结果到ipfs
         // 7. 回调，写入账本
 
-        final Map<String, String> hashOrgMap = new HashMap<>();
-
         beginStep("解析参数");
 
         Map<String, Object> argsMap = null;
 
+        final List<String[]> blackListOrgHash = new LinkedList<>();
+
         try {
             argsMap = getArgs();
 
-            List<String> blacklist = (List<String>) argsMap.get("blacklist");
-
-            hashOrgMap.putAll(
-              blacklist
-                .stream()
-                .map(c -> c.split(":"))
-                .collect(Collectors.toMap(l -> l[1], l -> l[0]))
-            );
+            blackListOrgHash.addAll(((List<String>) argsMap.get("blacklist")).stream()
+                    .map(c -> c.split(":")).collect(Collectors.toList()));
         } catch (Exception e) {
             logger.error("invalid black list format");
 
@@ -94,26 +88,25 @@ public abstract class MergeTask extends GenericJobTask {
         Map<String, Set<String>> mergedResultVotes = new ConcurrentHashMap<>();
 
         // 处理各公司黑名单
-        Set<String> blacklistHash = hashOrgMap.keySet();
 
-        if (blacklistHash != null && blacklistHash.size() > 0) {
+        if (blackListOrgHash != null && blackListOrgHash.size() > 0) {
             try {
-                new IPFSFileIterator(blacklistHash, localIpfs).forEachLine((line, hash) -> {
+                new IPFSFileIterator<>(blackListOrgHash, localIpfs).mapHash(c -> c[1]).forEachLine((line, compositHash) -> {
+                    String org = compositHash[0];
+
                     if (mergedResultVotes.containsKey(line)) {
                         Set<String> hSet = mergedResultVotes.get(line);
-                        hSet.add(hashOrgMap.get(hash));
+                        hSet.add(org);
 
                         mergedResultVotes.put(line, hSet);
                     } else {
                         Set<String> hSet = new HashSet<>();
-                        hSet.add(hashOrgMap.get(hash));
+                        hSet.add(org);
 
                         mergedResultVotes.put(line, hSet);
                     }
-
-                    return mergedResultVotes;
                 }, (j, total) -> {
-                    String step = String.format("合并黑名单(%d/%d)", j, blacklistHash.size());
+                    String step = String.format("合并黑名单(%d/%d)", j, blackListOrgHash.size());
                     beginStep(step);
                 });
             } catch (TimeoutException | IOException e) {
@@ -145,8 +138,6 @@ public abstract class MergeTask extends GenericJobTask {
             try {
                 new IPFSFileIterator(removelistsHash, localIpfs).forEachLine((line, hash) -> {
                     mergedResultVotes.remove(line);
-
-                    return mergedResultVotes;
                 }, (i, total) -> {
                     String step = String.format("处理移除(%d/%d)", i, removelistsHash.size());
                     beginStep(step);

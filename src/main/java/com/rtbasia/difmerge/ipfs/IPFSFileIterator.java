@@ -9,33 +9,49 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 
-public class IPFSFileIterator {
+public class IPFSFileIterator<E> {
     final static Logger logger = LoggerFactory.getLogger(MergeTask.class);
 
-    public Collection<String> someHash;
+    public Collection<E> someHash;
     public IPFSClient ipfs;
 
-    public IPFSFileIterator(Collection<String> someHash, IPFSClient ipfsClient) {
+    private CompositHashHandler hashParser;
+
+    public IPFSFileIterator(Collection<E> someHash, IPFSClient ipfsClient) {
         this.someHash = someHash;
         this.ipfs = ipfsClient;
     }
 
-    public void forEachLine(LineProcessor lineProcessor, ProgressHandler progressHandler) throws TimeoutException, IOException {
+    public IPFSFileIterator<E> mapHash(CompositHashHandler<E> hashParser) {
+        this.hashParser = hashParser;
+
+        return this;
+    }
+
+    public void forEachLine(LineProcessor<E> lineProcessor, ProgressHandler progressHandler) throws TimeoutException, IOException {
         int i = 0;
 
-        for (String hashBase58 : someHash) {
+        for (E compositHash : someHash) {
+            String realHashBase58 = null;
+
+            if (hashParser != null) {
+                realHashBase58 = hashParser.extractHash(compositHash);
+            } else {
+                realHashBase58 = (String)compositHash;
+            }
+
             i++;
-            Multihash hash = Multihash.fromBase58(hashBase58);
+            Multihash hash = Multihash.fromBase58(realHashBase58);
 
             try {
                 boolean fileExists = ipfs.fileExists(hash);
 
                 if (!fileExists) {
-                    logger.warn("file not exists, this should not happen. hash " + hashBase58);
+                    logger.warn("file not exists, this should not happen. hash " + realHashBase58);
                     continue;
                 }
             } catch (IOException e) {
-                logger.error("error when check file existence, ignore it,  hash " + hashBase58);
+                logger.error("error when check file existence, ignore it,  hash " + realHashBase58);
 
                 continue;
             }
@@ -43,10 +59,10 @@ public class IPFSFileIterator {
             Set<String> blackListData = null;
 
             progressHandler.updateProgress(i, someHash.size());
-            blackListData = new HashSet(Arrays.asList(new String(ipfs.cat(hashBase58)).split("\n")));
+            blackListData = new HashSet(Arrays.asList(new String(ipfs.cat(realHashBase58)).split("\n")));
 
             for (String blackListDatum : blackListData) {
-                lineProcessor.process(blackListDatum, hashBase58);
+                lineProcessor.process(blackListDatum, compositHash);
             }
         }
     }
