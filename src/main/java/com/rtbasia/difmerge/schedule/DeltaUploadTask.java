@@ -140,7 +140,7 @@ public class DeltaUploadTask extends GenericJobTask {
 
     public String merge(Set<String> oldList, Set<String> addItems, Set<String> removeItems) {
         Set<String> newList = oldList != null ? oldList.stream()
-                .filter(i -> removeItems.contains(i)).collect(Collectors.toSet()) : new HashSet<>();
+                .filter(i -> !removeItems.contains(i)).collect(Collectors.toSet()) : new HashSet<>();
         newList.addAll(addItems);
 
         return newList.stream().collect(Collectors.joining("\n"));
