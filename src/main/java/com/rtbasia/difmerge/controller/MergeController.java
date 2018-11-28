@@ -82,6 +82,7 @@ public class MergeController {
         // 校验文件格式
         DeltaFileValidator.validate(type, Paths.get(tempFilePath));
 
+        // version 对增量上传来说无意义
         Job job = new Job(tempFilePath, "deltaUpload" + type, extraArgs, callbackUrl, callbackArgs);
 
         jobMapper.addJob(job);
@@ -95,16 +96,31 @@ public class MergeController {
     @PostMapping("/merge")
     public SubmitResponse merge(@RequestParam("type") String type,
                       @RequestParam("extraArgs") String extraArgs,
+                      @RequestParam("version") int version,
                       @RequestParam("callbackUrl") String callbackUrl,
                       @RequestParam("callbackArgs") String callbackArgs) {
-        Job job = new Job("", "merge-" + type, extraArgs, callbackUrl, callbackArgs);
+        String action = "merge-" + type;
 
-        jobMapper.addJob(job);
+        logger.info(String.format("got merge request, action: %s, version: %d", action, version));
 
-        // 提交job到任务队列
-        scheduler.addTask(job);
+        int count = jobMapper.mergeJobExists(action, version);
 
-        return SubmitResponse.ok();
+        if (count > 0) {
+            logger.info("job already exists, ignore it: " + action);
+
+            return SubmitResponse.ok();
+        } else {
+            logger.info("job not exists, create it: " + action);
+
+            Job job = new Job("", action, extraArgs, callbackUrl, callbackArgs, version);
+
+            jobMapper.addJob(job);
+
+            // 提交job到任务队列
+            scheduler.addTask(job);
+
+            return SubmitResponse.ok();
+        }
     }
 
     @PostMapping("/appeal")

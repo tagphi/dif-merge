@@ -20,6 +20,7 @@ public class Job {
     private String step;
     private String message;
     private String status;
+    private int version=0;
     private Timestamp createTime;
     private Timestamp modifiedTime;
     private Map<String, Object> extCallbackArgs = new HashMap<>();
@@ -33,6 +34,7 @@ public class Job {
                String step,
                String status,
                String message,
+               int version,
                Timestamp createTime,
                Timestamp modifiedTime) {
         this.tempFilePath = tempFilePath;
@@ -42,6 +44,7 @@ public class Job {
         this.callbackArgs = callbackArgs;
         this.step = step;
         this.message = message;
+        this.version = version;
         this.status = status;
         this.createTime = createTime;
         this.modifiedTime = modifiedTime;
@@ -57,6 +60,20 @@ public class Job {
         this.extraArgs = extraArgs;
         this.callbackUrl = callbackUrl;
         this.callbackArgs = callbackArgs;
+    }
+
+    public Job(String tempFilePath,
+               String action,
+               String extraArgs,
+               String callbackUrl,
+               String callbackArgs,
+               int version) {
+        this.tempFilePath = tempFilePath;
+        this.action = action;
+        this.extraArgs = extraArgs;
+        this.callbackUrl = callbackUrl;
+        this.callbackArgs = callbackArgs;
+        this.version = version;
     }
 
     public int getId() {
@@ -129,6 +146,14 @@ public class Job {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public Timestamp getCreateTime() {
