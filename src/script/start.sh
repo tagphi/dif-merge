@@ -1,5 +1,11 @@
 #!/bin/sh
 
+darwin=false
+
+case "`uname`" in
+Darwin*) darwin=true;;
+esac
+
 if [ -z "$JAVA_HOME" ] && [ -z "$JRE_HOME" ]; then
   if $darwin; then
     if [ -x '/usr/libexec/java_home' ] ; then
