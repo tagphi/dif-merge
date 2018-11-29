@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 public class IPFSClient {
-    final static Logger logger = LoggerFactory.getLogger(DeltaUploadTask.class);
+    final static Logger logger = LoggerFactory.getLogger(IPFSClient.class);
 
     private IPFS ipfs;
     private int defaultCheckExistsTimeoutSecs;

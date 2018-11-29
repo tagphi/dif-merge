@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 
 @Component
 public class Scheduler implements ApplicationContextAware {
-    final static Logger logger = LoggerFactory.getLogger(DeltaUploadTask.class);
+    final static Logger logger = LoggerFactory.getLogger(Scheduler.class);
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private ApplicationContext ctx;
