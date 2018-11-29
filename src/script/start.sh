@@ -60,7 +60,7 @@ PRGDIR=`dirname "$PRG"`
 
 [ -z "$DIF_MERGE_HOME" ] && DIF_MERGE_HOME=`cd "$PRGDIR/.." >/dev/null; pwd`
 
-JAVA_OPTS="$JAVA_OPTS -server -Xms2g -Xmx2g"
+JAVA_OPTS="$JAVA_OPTS -server -Xms2g -Xmx4g"
 JAVA_OPTS="$JAVA_OPTS -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly"
 JAVA_OPTS="$JAVA_OPTS -XX:+UseParNewGC -XX:MaxTenuringThreshold=2 -XX:SurvivorRatio=2 -XX:+AlwaysPreTouch -XX:+UseCompressedOops"
 JAVA_OPTS="$JAVA_OPTS -verbose:gc -XX:-OmitStackTraceInFastThrow -XX:+HeapDumpOnOutOfMemoryError -Xloggc:\"${DIF_MERGE_HOME}/gc.log\" -XX:NumberOfGCLogFiles=5 -XX:+UseGCLogFileRotation -XX:GCLogFileSize=20M"
