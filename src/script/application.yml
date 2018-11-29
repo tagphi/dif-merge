@@ -7,12 +7,12 @@ spring:
       local:
         host: 127.0.0.1
         port: 5001
-        check-exists-timeout-secs: 3
+        check-exists-timeout-secs: 15
         download-timeout-secs: 600
       remote:
         host: 175.6.228.227
         port: 5001
-        check-exists-timeout-secs: 3
+        check-exists-timeout-secs: 15
         download-timeout-secs: 600
     tempFileDir: ./temp/
   servlet:
