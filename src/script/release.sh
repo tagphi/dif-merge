@@ -37,4 +37,4 @@ cp "${PROJ_HOME}/src/script/application.yml" "$CONF_DIR"
 cp "${PROJ_HOME}/src/script/start.sh" "$BIN_DIR"
 cp "${PROJ_HOME}/src/script/stop.sh" "$BIN_DIR"
 
-cd "$RELEASE_DIR" && tar czvf dif-merge-0.0.1.tar.gz dif-merge && rm -fr "$TEMP_DIR"
+cd "$RELEASE_DIR" && tar czvf dif-merge-0.0.2.tar.gz dif-merge && rm -fr "$TEMP_DIR"
